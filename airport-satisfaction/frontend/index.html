@@ -11,26 +11,25 @@
 
   <!-- ── Header ───────────────────────────────────────────── -->
   <header>
-    <div class="header-left">
-      <span class="logo">✈</span>
-      <div>
-        <h1>Passenger Satisfaction</h1>
-        <span class="subtitle">Real-time Emotion Analytics</span>
-      </div>
+  <div class="header-left">
+    <span class="logo" id="planeLogo">✈</span>
+    <div class="nav-dropdown">
+       <div class="nav-menu" id="navMenu">
+         <a class="nav-item active" onclick="showPage('dashboard')">📊 Dashboard</a>
+         <a class="nav-item" onclick="showPage('cameras')">📷 Camere Live</a>
+       </div>
     </div>
-    <div class="header-right">
-      <div class="status-dot" id="connectionDot"></div>
-      <span id="connectionLabel">Connecting...</span>
-      <span class="last-update" id="lastUpdate"></span>
-      <div class="nav-dropdown">
-        <button class="nav-btn" id="navBtn">&#9776; Meniu</button>
-        <div class="nav-menu" id="navMenu">
-          <a class="nav-item active" onclick="showPage('dashboard')">📊 Dashboard</a>
-          <a class="nav-item" onclick="showPage('cameras')">📷 Camere Live</a>
-        </div>
-      </div>
+    <div>
+      <h1>Passenger Satisfaction</h1>
+      <span class="subtitle">Real-time Emotion Analytics</span>
     </div>
-  </header>
+  </div>
+  
+  <div class="header-right">
+    <div class="status-dot" id="connectionDot"></div>
+    <span id="connectionLabel">Connecting...</span>
+  </div>
+</header>
 
   <!-- ── Page: Dashboard ──────────────────────────────── -->
   <main id="page-dashboard">

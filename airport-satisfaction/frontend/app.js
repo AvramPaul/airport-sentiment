@@ -250,17 +250,43 @@ function refreshFeeds() {
   });
 }
 
-// ── Page Navigation ───────────────────────────────────────────────
+// ── Page Navigation & Plane Animation ─────────────────────────────
 let _feedInterval = null;
+const planeLogo = document.getElementById("planeLogo");
+const navMenu = document.getElementById("navMenu");
+
+// Funcția care gestionează decolarea și meniul
+planeLogo.addEventListener("click", (e) => {
+  e.stopPropagation();
+  
+  // Dacă meniul nu este deschis, pornim animația și îl deschidem
+  if (!navMenu.classList.contains("open")) {
+    planeLogo.classList.add("flying");
+    navMenu.classList.add("open");
+  } else {
+    // Dacă e deja deschis, îl închidem și aducem avionul înapoi
+    closeMenu();
+  }
+});
+
+function closeMenu() {
+  navMenu.classList.remove("open");
+  planeLogo.classList.remove("flying");
+}
 
 function showPage(page) {
+  // Switch între pagini
   document.getElementById("page-dashboard").style.display = page === "dashboard" ? "" : "none";
   document.getElementById("page-cameras").style.display   = page === "cameras"   ? "" : "none";
 
+  // Actualizare vizuală meniu (clasa active)
   document.querySelectorAll(".nav-item").forEach(el => {
-    el.classList.toggle("active", el.getAttribute("onclick").includes(page));
+    // Verificăm dacă atributul onclick conține numele paginii
+    const isTargetPage = el.getAttribute("onclick").includes(page);
+    el.classList.toggle("active", isTargetPage);
   });
 
+  // Gestionare intervale camere
   if (page === "cameras") {
     refreshFeeds();
     if (!_feedInterval) _feedInterval = setInterval(refreshFeeds, FRAME_INTERVAL);
@@ -268,8 +294,16 @@ function showPage(page) {
     if (_feedInterval) { clearInterval(_feedInterval); _feedInterval = null; }
   }
 
-  document.getElementById("navMenu").classList.remove("open");
+  // După ce alegem o pagină, închidem meniul și resetăm avionul
+  closeMenu();
 }
+
+// Închide meniul dacă se dă click oriunde altundeva în pagină
+document.addEventListener("click", (e) => {
+  if (navMenu.classList.contains("open")) {
+    closeMenu();
+  }
+});
 
 // Dropdown toggle
 document.getElementById("navBtn").addEventListener("click", (e) => {
