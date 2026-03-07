@@ -11,7 +11,7 @@ CAMERAS = {
 }
 
 # ── AI Pipeline ───────────────────────────────────────────────
-FRAME_INTERVAL_SECONDS = 2
+FRAME_INTERVAL_SECONDS = 0.1
 EMOTION_CLASSES = ["happy", "neutral", "sad"]
 EMOTION_MAP = {
     "happy":    "happy",

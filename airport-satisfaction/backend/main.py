@@ -12,9 +12,11 @@ Endpoints:
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from sqlalchemy import desc
+import base64
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -25,6 +27,9 @@ from backend.aggregator import start_scheduler, buffer_frame
 from backend.alerts import check_and_alert
 
 app = FastAPI(title="Airport Satisfaction API", version="1.0.0")
+
+# In-memory store for latest annotated frame per camera
+_latest_frames: dict[str, bytes] = {}
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,6 +47,10 @@ def on_startup():
 
 
 # ── Schemas ──────────────────────────────────────────────────
+class FrameJpeg(BaseModel):
+    frame_b64: str
+
+
 class FrameUpdate(BaseModel):
     camera_id:     str
     timestamp:     str
@@ -135,6 +144,21 @@ def get_cameras():
         {"camera_id": cam_id, "camera_name": info["name"]}
         for cam_id, info in CAMERAS.items()
     ]
+
+
+@app.post("/api/frame/{camera_id}")
+def upload_frame(camera_id: str, data: FrameJpeg):
+    """Receive latest annotated JPEG frame from AI Pipeline."""
+    _latest_frames[camera_id] = base64.b64decode(data.frame_b64)
+    return {"status": "ok"}
+
+
+@app.get("/api/frame/{camera_id}")
+def get_frame(camera_id: str):
+    """Return latest annotated JPEG frame for a camera."""
+    if camera_id not in _latest_frames:
+        raise HTTPException(status_code=404, detail="No frame available yet")
+    return Response(content=_latest_frames[camera_id], media_type="image/jpeg")
 
 
 if __name__ == "__main__":

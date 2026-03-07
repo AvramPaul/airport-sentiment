@@ -2,19 +2,19 @@
 face_detector.py
 ────────────────
 Wraps RetinaFace to detect all faces in a frame.
-Returns a list of cropped face images ready for emotion classification.
+Returns a list of dicts with cropped face image and bounding box.
 """
 
 import numpy as np
 from deepface import DeepFace
 
 
-def detect_faces(frame: np.ndarray) -> list[np.ndarray]:
+def detect_faces(frame: np.ndarray) -> list[dict]:
     """
     Detect all faces in a BGR frame.
 
     Returns:
-        List of cropped face images (numpy arrays, BGR).
+        List of dicts: {"crop": np.ndarray, "bbox": (x1, y1, x2, y2)}
         Empty list if no faces detected or on error.
     """
     try:
@@ -35,13 +35,13 @@ def detect_faces(frame: np.ndarray) -> list[np.ndarray]:
             # Add small padding for better emotion recognition
             h, w = frame.shape[:2]
             pad = 10
-            x1 = max(0, x1 - pad)
-            y1 = max(0, y1 - pad)
-            x2 = min(w, x2 + pad)
-            y2 = min(h, y2 + pad)
-            face_crop = frame[y1:y2, x1:x2]
+            x1p = max(0, x1 - pad)
+            y1p = max(0, y1 - pad)
+            x2p = min(w, x2 + pad)
+            y2p = min(h, y2 + pad)
+            face_crop = frame[y1p:y2p, x1p:x2p]
             if face_crop.size > 0:
-                faces.append(face_crop)
+                faces.append({"crop": face_crop, "bbox": (x1, y1, x2, y2)})
 
         return faces
 

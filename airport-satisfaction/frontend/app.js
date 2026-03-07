@@ -2,6 +2,9 @@
 const API_BASE        = "http://localhost:8000";
 const LIVE_INTERVAL   = 5000;   // ms
 const CHART_INTERVAL  = 60000;  // ms
+const FRAME_INTERVAL  = 2000;   // ms — camera feed refresh
+
+const CAMERA_IDS = ["CAM_01", "CAM_02", "CAM_03", "CAM_04"];
 
 // ── State ──────────────────────────────────────────────────────
 let historyChart = null;
@@ -202,6 +205,80 @@ function renderChart(data, camId) {
 function avg(arr) {
   return arr.length ? +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : 0;
 }
+
+// ── Camera Feeds ─────────────────────────────────────────────────
+function refreshFeeds() {
+  CAMERA_IDS.forEach(camId => {
+    const img = document.getElementById(`feed-${camId}`);
+    const noSignal = document.getElementById(`nosignal-${camId}`);
+    if (!img) return;
+
+    const newSrc = `${API_BASE}/api/frame/${camId}?t=${Date.now()}`;
+    const tester = new Image();
+    tester.onload = () => {
+      img.src = newSrc;
+      if (noSignal) noSignal.style.display = "none";
+    };
+    tester.onerror = () => {
+      if (noSignal) noSignal.style.display = "flex";
+    };
+    tester.src = newSrc;
+
+    // Update emotion stats below each feed from liveData
+    const stats = document.getElementById(`feedstats-${camId}`);
+    if (stats && liveData[camId]) {
+      const cam = liveData[camId];
+      stats.innerHTML = `
+        <div class="feed-stat-row">
+          <span class="feed-emotion-dot" style="background:var(--happy)"></span>
+          <span>Fericit</span><strong>${cam.happy}%</strong>
+          <div class="feed-bar-track"><div class="feed-bar-fill" style="width:${cam.happy}%;background:var(--happy)"></div></div>
+        </div>
+        <div class="feed-stat-row">
+          <span class="feed-emotion-dot" style="background:var(--neutral)"></span>
+          <span>Neutru</span><strong>${cam.neutral}%</strong>
+          <div class="feed-bar-track"><div class="feed-bar-fill" style="width:${cam.neutral}%;background:var(--neutral)"></div></div>
+        </div>
+        <div class="feed-stat-row">
+          <span class="feed-emotion-dot" style="background:var(--sad)"></span>
+          <span>Supărat</span><strong>${cam.sad}%</strong>
+          <div class="feed-bar-track"><div class="feed-bar-fill" style="width:${cam.sad}%;background:var(--sad)"></div></div>
+        </div>
+        <div class="feed-persons">👥 ${cam.total_persons} persoane detectate</div>
+      `;
+    }
+  });
+}
+
+// ── Page Navigation ───────────────────────────────────────────────
+let _feedInterval = null;
+
+function showPage(page) {
+  document.getElementById("page-dashboard").style.display = page === "dashboard" ? "" : "none";
+  document.getElementById("page-cameras").style.display   = page === "cameras"   ? "" : "none";
+
+  document.querySelectorAll(".nav-item").forEach(el => {
+    el.classList.toggle("active", el.getAttribute("onclick").includes(page));
+  });
+
+  if (page === "cameras") {
+    refreshFeeds();
+    if (!_feedInterval) _feedInterval = setInterval(refreshFeeds, FRAME_INTERVAL);
+  } else {
+    if (_feedInterval) { clearInterval(_feedInterval); _feedInterval = null; }
+  }
+
+  document.getElementById("navMenu").classList.remove("open");
+}
+
+// Dropdown toggle
+document.getElementById("navBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  document.getElementById("navMenu").classList.toggle("open");
+});
+document.addEventListener("click", () => {
+  document.getElementById("navMenu").classList.remove("open");
+});
 
 // ── Event Listeners ─────────────────────────────────────────────
 document.getElementById("camSelect").addEventListener("change", fetchHistory);
