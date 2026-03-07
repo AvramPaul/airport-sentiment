@@ -2,13 +2,19 @@
 const API_BASE        = "http://localhost:8000";
 const LIVE_INTERVAL   = 5000;   // ms
 const CHART_INTERVAL  = 60000;  // ms
-const FRAME_INTERVAL  = 2000;   // ms — camera feed refresh
+const FRAME_INTERVAL  = 2000;   // ms
 
 const CAMERA_IDS = ["CAM_01", "CAM_02", "CAM_03", "CAM_04"];
 
+const PAGE_TITLES = {
+  dashboard: "Dashboard",
+  cameras:   "Camere Live",
+  notify:    "Notificări Personal",
+};
+
 // ── State ──────────────────────────────────────────────────────
 let historyChart = null;
-let liveData = {};
+let liveData     = {};
 
 // ── Helpers ────────────────────────────────────────────────────
 function dominant(cam) {
@@ -19,18 +25,49 @@ function dominant(cam) {
 }
 
 function satisfactionColor(cam) {
-  const score = cam.happy - cam.sad;          // -100 to +100
+  const score = cam.happy - cam.sad;
   if (score > 20)  return "#22c55e";
   if (score > -20) return "#f59e0b";
   return "#ef4444";
 }
 
 function formatTime(iso) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return new Date(iso).toLocaleTimeString("ro-RO", {
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+}
+
+function isDark() {
+  return document.documentElement.getAttribute("data-theme") === "dark";
+}
+
+function chartColors() {
+  return {
+    grid:   isDark() ? "#1e2535" : "#e2e8f0",
+    tick:   isDark() ? "#6b7fa3" : "#64748b",
+    legend: isDark() ? "#c9d1d9" : "#1e293b",
+  };
+}
+
+// ── Theme toggle ───────────────────────────────────────────────
+function toggleTheme() {
+  const next = isDark() ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("theme", next);
+  syncThemeIcon();
+  if (historyChart) fetchHistory();   // re-render with new palette
+}
+
+function syncThemeIcon() {
+  const dark = isDark();
+  document.getElementById("themeIconMoon").style.display = dark ? "none" : "";
+  document.getElementById("themeIconSun").style.display  = dark ? ""     : "none";
 }
 
 // ── Live Cards ─────────────────────────────────────────────────
+const DOM_LABEL = { happy: "😊 Fericit",  neutral: "😐 Neutru",  sad: "😠 Supărat" };
+const DOM_COLOR = { happy: "#22c55e",     neutral: "#f59e0b",    sad: "#ef4444"    };
+
 function renderCards(cameras) {
   const grid = document.getElementById("liveGrid");
 
@@ -44,6 +81,9 @@ function renderCards(cameras) {
     }
 
     const dom = dominant(cam);
+    const badgeBg  = DOM_COLOR[dom] + "20";
+    const badgeClr = DOM_COLOR[dom];
+
     card.className = `cam-card dominant-${dom}`;
     card.innerHTML = `
       <div class="card-header">
@@ -51,9 +91,13 @@ function renderCards(cameras) {
           <div class="card-title">${cam.camera_name}</div>
           <div class="card-id">${cam.camera_id}</div>
         </div>
-        <div class="card-persons">
-          <span>${cam.total_persons}</span>
-          persoane
+        <div>
+          <span class="emotion-badge" style="background:${badgeBg};color:${badgeClr};border:1px solid ${badgeClr}40">
+            ${DOM_LABEL[dom]}
+          </span>
+          <div class="card-persons" style="margin-top:6px">
+            <span>${cam.total_persons}</span>persoane
+          </div>
         </div>
       </div>
 
@@ -85,13 +129,12 @@ function updateHeatmap(cameras) {
     const color = satisfactionColor(cam);
     circle.setAttribute("fill", color);
     circle.style.filter = `drop-shadow(0 0 8px ${color})`;
-    label.textContent = `${cam.happy}% 😊`;
+    label.textContent   = `${cam.happy}% 😊`;
 
-    // Tooltip on hover
-    const marker = document.getElementById(`marker-${cam.camera_id}`);
+    const marker  = document.getElementById(`marker-${cam.camera_id}`);
     const tooltip = document.getElementById("tooltip");
     if (marker) {
-      marker.onmouseenter = (e) => {
+      marker.onmouseenter = () => {
         tooltip.innerHTML = `
           <strong>${cam.camera_name}</strong><br>
           😊 Fericit: ${cam.happy}%<br>
@@ -102,41 +145,40 @@ function updateHeatmap(cameras) {
         tooltip.classList.add("visible");
       };
       marker.onmouseleave = () => tooltip.classList.remove("visible");
-      marker.onmousemove = (e) => {
+      marker.onmousemove  = (e) => {
         const rect = document.querySelector(".heatmap-container").getBoundingClientRect();
-        tooltip.style.left = (e.clientX - rect.left + 12) + "px";
-        tooltip.style.top  = (e.clientY - rect.top  + 12) + "px";
+        tooltip.style.left = (e.clientX - rect.left + 14) + "px";
+        tooltip.style.top  = (e.clientY - rect.top  + 14) + "px";
       };
     }
   });
 }
 
-// ── Live Polling ────────────────────────────────────────────────
+// ── Live Polling ───────────────────────────────────────────────
 async function fetchLive() {
   try {
     const res  = await fetch(`${API_BASE}/api/live`);
     const data = await res.json();
-    liveData = {};
+    liveData   = {};
     data.forEach(c => liveData[c.camera_id] = c);
 
     renderCards(data);
     updateHeatmap(data);
 
-    document.getElementById("connectionDot").className   = "status-dot online";
+    document.getElementById("connectionDot").className    = "status-dot online";
     document.getElementById("connectionLabel").textContent = "Online";
-    document.getElementById("lastUpdate").textContent    = `Ultima actualizare: ${new Date().toLocaleTimeString("ro-RO")}`;
-  } catch (e) {
-    document.getElementById("connectionDot").className   = "status-dot offline";
+    document.getElementById("lastUpdate").textContent     =
+      `Ultima actualizare: ${new Date().toLocaleTimeString("ro-RO")}`;
+  } catch {
+    document.getElementById("connectionDot").className    = "status-dot offline";
     document.getElementById("connectionLabel").textContent = "Offline";
-    console.error("Live fetch error:", e);
   }
 }
 
-// ── History Chart ───────────────────────────────────────────────
+// ── History Chart ──────────────────────────────────────────────
 async function fetchHistory() {
-  const camId  = document.getElementById("camSelect").value;
-  const hours  = document.getElementById("rangeSelect").value;
-
+  const camId = document.getElementById("camSelect").value;
+  const hours = document.getElementById("rangeSelect").value;
   let url = `${API_BASE}/api/history?hours=${hours}`;
   if (camId) url += `&camera_id=${camId}`;
 
@@ -144,14 +186,12 @@ async function fetchHistory() {
     const res  = await fetch(url);
     const data = await res.json();
     renderChart(data, camId);
-  } catch (e) {
-    console.error("History fetch error:", e);
-  }
+  } catch { /* silent */ }
 }
 
 function renderChart(data, camId) {
-  // If all cameras selected, group by timestamp and average
   let labels, happySet, neutralSet, sadSet;
+  const c = chartColors();
 
   if (!camId) {
     const grouped = {};
@@ -172,7 +212,6 @@ function renderChart(data, camId) {
   }
 
   const ctx = document.getElementById("historyChart").getContext("2d");
-
   if (historyChart) historyChart.destroy();
 
   historyChart = new Chart(ctx, {
@@ -180,25 +219,25 @@ function renderChart(data, camId) {
     data: {
       labels,
       datasets: [
-        { label: "😊 Fericit %",  data: happySet,   borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,.1)",  tension: 0.4, fill: true },
-        { label: "😐 Neutru %",   data: neutralSet, borderColor: "#f59e0b", backgroundColor: "rgba(245,158,11,.08)", tension: 0.4, fill: false },
-        { label: "😠 Supărat %",  data: sadSet,     borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,.08)", tension: 0.4, fill: false },
-      ]
+        { label: "😊 Fericit %",  data: happySet,   borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,.1)",   tension: 0.4, fill: true  },
+        { label: "😐 Neutru %",   data: neutralSet, borderColor: "#f59e0b", backgroundColor: "rgba(245,158,11,.07)", tension: 0.4, fill: false },
+        { label: "😠 Supărat %",  data: sadSet,     borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,.07)",  tension: 0.4, fill: false },
+      ],
     },
     options: {
       responsive: true,
       interaction: { mode: "index", intersect: false },
       scales: {
-        x: { ticks: { color: "#6b7fa3", maxTicksLimit: 12 }, grid: { color: "#1e2535" } },
-        y: { min: 0, max: 100, ticks: { color: "#6b7fa3", callback: v => v + "%" }, grid: { color: "#1e2535" } }
+        x: { ticks: { color: c.tick, maxTicksLimit: 12 }, grid: { color: c.grid } },
+        y: { min: 0, max: 100,
+             ticks: { color: c.tick, callback: v => v + "%" },
+             grid:  { color: c.grid } },
       },
       plugins: {
-        legend: { labels: { color: "#c9d1d9", padding: 20 } },
-        tooltip: {
-          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%` }
-        }
-      }
-    }
+        legend: { labels: { color: c.legend, padding: 20 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%` } },
+      },
+    },
   });
 }
 
@@ -206,25 +245,19 @@ function avg(arr) {
   return arr.length ? +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : 0;
 }
 
-// ── Camera Feeds ─────────────────────────────────────────────────
+// ── Camera Feeds ───────────────────────────────────────────────
 function refreshFeeds() {
   CAMERA_IDS.forEach(camId => {
-    const img = document.getElementById(`feed-${camId}`);
+    const img      = document.getElementById(`feed-${camId}`);
     const noSignal = document.getElementById(`nosignal-${camId}`);
     if (!img) return;
 
     const newSrc = `${API_BASE}/api/frame/${camId}?t=${Date.now()}`;
     const tester = new Image();
-    tester.onload = () => {
-      img.src = newSrc;
-      if (noSignal) noSignal.style.display = "none";
-    };
-    tester.onerror = () => {
-      if (noSignal) noSignal.style.display = "flex";
-    };
+    tester.onload  = () => { img.src = newSrc; if (noSignal) noSignal.style.display = "none"; };
+    tester.onerror = () => { if (noSignal) noSignal.style.display = "flex"; };
     tester.src = newSrc;
 
-    // Update emotion stats below each feed from liveData
     const stats = document.getElementById(`feedstats-${camId}`);
     if (stats && liveData[camId]) {
       const cam = liveData[camId];
@@ -250,7 +283,7 @@ function refreshFeeds() {
   });
 }
 
-// ── Staff Notifications ───────────────────────────────────────────
+// ── Staff Notifications ────────────────────────────────────────
 async function sendNotification() {
   const recipient = document.getElementById("notifyRecipient").value;
   const message   = document.getElementById("notifyMessage").value.trim();
@@ -259,39 +292,39 @@ async function sendNotification() {
 
   if (!message) {
     status.textContent = "⚠️ Mesajul nu poate fi gol.";
-    status.className = "notify-status error";
+    status.className   = "notify-status error";
     return;
   }
 
-  btn.disabled = true;
+  btn.disabled       = true;
   status.textContent = "Se trimite...";
-  status.className = "notify-status";
+  status.className   = "notify-status";
 
   try {
     const res = await fetch(`${API_BASE}/api/notify`, {
-      method: "POST",
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recipient, message }),
+      body:    JSON.stringify({ recipient, message }),
     });
     if (res.ok) {
-      const recipientLabel = document.getElementById("notifyRecipient").selectedOptions[0].text;
-      status.textContent = `✅ Mesaj trimis către ${recipientLabel}.`;
-      status.className = "notify-status success";
+      const label = document.getElementById("notifyRecipient").selectedOptions[0].text;
+      status.textContent = `✅ Mesaj trimis către ${label}.`;
+      status.className   = "notify-status success";
       document.getElementById("notifyMessage").value = "";
     } else {
       const err = await res.json();
       status.textContent = `❌ Eroare: ${err.detail}`;
-      status.className = "notify-status error";
+      status.className   = "notify-status error";
     }
-  } catch (e) {
+  } catch {
     status.textContent = "❌ Nu s-a putut contacta serverul.";
-    status.className = "notify-status error";
+    status.className   = "notify-status error";
   } finally {
     btn.disabled = false;
   }
 }
 
-// ── Page Navigation ───────────────────────────────────────────────
+// ── Page Navigation ────────────────────────────────────────────
 const _pages = ["dashboard", "cameras", "notify"];
 let _feedInterval = null;
 
@@ -300,9 +333,11 @@ function showPage(page) {
     document.getElementById(`page-${p}`).style.display = p === page ? "" : "none";
   });
 
-  document.querySelectorAll(".nav-item").forEach(el => {
-    el.classList.toggle("active", el.getAttribute("onclick").includes(page));
+  document.querySelectorAll(".sidebar-nav .nav-item").forEach(el => {
+    el.classList.toggle("active", el.dataset.page === page);
   });
+
+  document.getElementById("pageTitle").textContent = PAGE_TITLES[page] || "";
 
   if (page === "cameras") {
     refreshFeeds();
@@ -310,25 +345,15 @@ function showPage(page) {
   } else {
     if (_feedInterval) { clearInterval(_feedInterval); _feedInterval = null; }
   }
-
-  document.getElementById("navMenu").classList.remove("open");
 }
 
-// Dropdown toggle
-document.getElementById("navBtn").addEventListener("click", (e) => {
-  e.stopPropagation();
-  document.getElementById("navMenu").classList.toggle("open");
-});
-document.addEventListener("click", () => {
-  document.getElementById("navMenu").classList.remove("open");
-});
-
-// ── Event Listeners ─────────────────────────────────────────────
+// ── Event Listeners ────────────────────────────────────────────
 document.getElementById("camSelect").addEventListener("change", fetchHistory);
 document.getElementById("rangeSelect").addEventListener("change", fetchHistory);
 
-// ── Init ────────────────────────────────────────────────────────
+// ── Init ───────────────────────────────────────────────────────
+syncThemeIcon();
 fetchLive();
 fetchHistory();
-setInterval(fetchLive, LIVE_INTERVAL);
+setInterval(fetchLive,    LIVE_INTERVAL);
 setInterval(fetchHistory, CHART_INTERVAL);

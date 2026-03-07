@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm install:*)",
+      "Bash(\"/c/Program Files/nodejs/npm.cmd\" install:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(grep:*)",
+      "Bash(powershell.exe:*)"
     ]
   }
 }

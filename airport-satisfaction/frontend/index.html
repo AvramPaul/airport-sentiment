@@ -1,236 +1,265 @@
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="ro" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Airport Satisfaction Dashboard</title>
+  <!-- Anti-flash: apply saved theme before first paint -->
+  <script>
+    (function () {
+      var t = localStorage.getItem('theme') ||
+              (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 </head>
 <body>
 
-  <!-- ── Header ───────────────────────────────────────────── -->
-  <header>
-    <div class="header-left">
-      <span class="logo">✈</span>
-      <div>
-        <h1>Passenger Satisfaction</h1>
-        <span class="subtitle">Real-time Emotion Analytics</span>
+  <!-- ── Sidebar ─────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-icon"><i class="bi bi-airplane-fill"></i></div>
+      <div class="logo-info">
+        <span class="logo-name">Oradea Int'l</span>
+        <span class="logo-sub">Airport · OMR</span>
       </div>
     </div>
-    <div class="header-right">
-      <div class="status-dot" id="connectionDot"></div>
-      <span id="connectionLabel">Connecting...</span>
-      <span class="last-update" id="lastUpdate"></span>
-      <div class="nav-dropdown">
-        <button class="nav-btn" id="navBtn">&#9776; Meniu</button>
-        <div class="nav-menu" id="navMenu">
-          <a class="nav-item active" onclick="showPage('dashboard')">📊 Dashboard</a>
-          <a class="nav-item" onclick="showPage('cameras')">📷 Camere Live</a>
-          <a class="nav-item" onclick="showPage('notify')">📣 Notificări Personal</a>
+
+    <div class="sidebar-sep"></div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+        <i class="bi bi-speedometer2"></i>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-page="cameras" onclick="showPage('cameras')">
+        <i class="bi bi-camera-video"></i>
+        <span>Camere Live</span>
+      </button>
+      <button class="nav-item" data-page="notify" onclick="showPage('notify')">
+        <i class="bi bi-megaphone"></i>
+        <span>Notificări Personal</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- ── Main Area ────────────────────────────────────────────── -->
+  <div class="main-area">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <h2 class="page-title" id="pageTitle">Dashboard</h2>
+      <div class="topbar-right">
+        <div class="status-badge">
+          <span class="status-dot" id="connectionDot"></span>
+          <span id="connectionLabel">Conectare...</span>
         </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- ── Page: Dashboard ──────────────────────────────── -->
-  <main id="page-dashboard">
-
-    <!-- ── Section 1: Live ──────────────────────────────────── -->
-    <section class="section-title">
-      <h2>📡 Live — Stare Curentă</h2>
-      <p>Actualizat la fiecare 5 secunde</p>
-    </section>
-
-    <div class="live-grid" id="liveGrid">
-      <!-- Cards injected by JS -->
-    </div>
-
-    <!-- ── Heatmap ──────────────────────────────────────────── -->
-    <section class="section-title">
-      <h2>🗺️ Heatmap Terminal</h2>
-      <p>Locația camerelor de supraveghere</p>
-    </section>
-
-    <div class="heatmap-container">
-      <svg id="airportSvg" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
-        <!-- Terminal outline -->
-        <rect x="20" y="20" width="760" height="360" rx="18" ry="18"
-              fill="#1a1f2e" stroke="#2e4a7a" stroke-width="2"/>
-        <!-- Main hall -->
-        <rect x="60" y="60" width="680" height="280" rx="10" ry="10"
-              fill="#141824" stroke="#2e4a7a" stroke-width="1" stroke-dasharray="6,4"/>
-        <!-- Labels -->
-        <text x="400" y="50" text-anchor="middle" fill="#4a6fa5" font-size="13" font-family="Arial">
-          TERMINAL A
-        </text>
-        <!-- Runway decoration -->
-        <line x1="20" y1="380" x2="780" y2="380" stroke="#2e4a7a" stroke-width="1" stroke-dasharray="20,10"/>
-
-        <!-- Camera markers — positioned in SVG, data updated by JS -->
-        <!-- CAM_01 Check-In -->
-        <g id="marker-CAM_01" class="cam-marker" transform="translate(130,200)">
-          <circle r="28" fill="#1a1f2e" stroke="#2e4a7a" stroke-width="2"/>
-          <circle r="22" fill="#333" class="cam-circle" id="circle-CAM_01"/>
-          <text y="5" text-anchor="middle" fill="white" font-size="9" font-family="Arial" font-weight="bold">CHECK-IN</text>
-          <text y="-35" text-anchor="middle" fill="#8899bb" font-size="10" font-family="Arial" id="label-CAM_01">--</text>
-        </g>
-
-        <!-- CAM_02 Security -->
-        <g id="marker-CAM_02" class="cam-marker" transform="translate(290,180)">
-          <circle r="28" fill="#1a1f2e" stroke="#2e4a7a" stroke-width="2"/>
-          <circle r="22" fill="#333" class="cam-circle" id="circle-CAM_02"/>
-          <text y="5" text-anchor="middle" fill="white" font-size="9" font-family="Arial" font-weight="bold">SECURITY</text>
-          <text y="-35" text-anchor="middle" fill="#8899bb" font-size="10" font-family="Arial" id="label-CAM_02">--</text>
-        </g>
-
-        <!-- CAM_03 Lounge -->
-        <g id="marker-CAM_03" class="cam-marker" transform="translate(490,220)">
-          <circle r="28" fill="#1a1f2e" stroke="#2e4a7a" stroke-width="2"/>
-          <circle r="22" fill="#333" class="cam-circle" id="circle-CAM_03"/>
-          <text y="5" text-anchor="middle" fill="white" font-size="9" font-family="Arial" font-weight="bold">LOUNGE</text>
-          <text y="-35" text-anchor="middle" fill="#8899bb" font-size="10" font-family="Arial" id="label-CAM_03">--</text>
-        </g>
-
-        <!-- CAM_04 Departure Gate -->
-        <g id="marker-CAM_04" class="cam-marker" transform="translate(660,195)">
-          <circle r="28" fill="#1a1f2e" stroke="#2e4a7a" stroke-width="2"/>
-          <circle r="22" fill="#333" class="cam-circle" id="circle-CAM_04"/>
-          <text y="5" text-anchor="middle" fill="white" font-size="9" font-family="Arial" font-weight="bold">GATE</text>
-          <text y="-35" text-anchor="middle" fill="#8899bb" font-size="10" font-family="Arial" id="label-CAM_04">--</text>
-        </g>
-
-        <!-- Legend -->
-        <g transform="translate(30,345)">
-          <circle cx="8"  cy="0" r="6" fill="#22c55e"/>
-          <text x="18" y="4" fill="#8899bb" font-size="10" font-family="Arial">Satisfăcut</text>
-          <circle cx="100" cy="0" r="6" fill="#f59e0b"/>
-          <text x="110" y="4" fill="#8899bb" font-size="10" font-family="Arial">Neutru</text>
-          <circle cx="180" cy="0" r="6" fill="#ef4444"/>
-          <text x="190" y="4" fill="#8899bb" font-size="10" font-family="Arial">Supărat</text>
-        </g>
-      </svg>
-
-      <!-- Tooltip -->
-      <div class="tooltip" id="tooltip"></div>
-    </div>
-
-    <!-- ── Section 2: History ───────────────────────────────── -->
-    <section class="section-title history-header">
-      <div>
-        <h2>📈 Evoluție Istorică</h2>
-        <p>Medie agregată la 15 minute</p>
-      </div>
-      <div class="history-controls">
-        <select id="camSelect">
-          <option value="">Toate camerele (medie)</option>
-          <option value="CAM_01">Check-In</option>
-          <option value="CAM_02">Security</option>
-          <option value="CAM_03">Lounge</option>
-          <option value="CAM_04">Departure Gate</option>
-        </select>
-        <select id="rangeSelect">
-          <option value="1">Ultima 1 oră</option>
-          <option value="6">Ultimele 6 ore</option>
-          <option value="24" selected>Ultimele 24 ore</option>
-        </select>
-      </div>
-    </section>
-
-    <div class="chart-container">
-      <canvas id="historyChart"></canvas>
-    </div>
-
-  </main>
-
-  <!-- ── Page: Camere Live ────────────────────────────── -->
-  <main id="page-cameras" style="display:none">
-    <section class="section-title" style="margin-top:32px">
-      <h2>📷 Camere Live</h2>
-      <p>Frame-uri adnotate în timp real cu detectarea emoțiilor</p>
-    </section>
-
-    <div class="feed-grid">
-      <div class="feed-card">
-        <div class="feed-title">Check-In <span class="feed-id">CAM_01</span></div>
-        <div class="feed-img-wrapper">
-          <img id="feed-CAM_01" class="feed-img" alt="CAM_01" />
-          <div class="feed-no-signal" id="nosignal-CAM_01">Fără semnal</div>
-        </div>
-        <div class="feed-stats" id="feedstats-CAM_01"></div>
-      </div>
-
-      <div class="feed-card">
-        <div class="feed-title">Security <span class="feed-id">CAM_02</span></div>
-        <div class="feed-img-wrapper">
-          <img id="feed-CAM_02" class="feed-img" alt="CAM_02" />
-          <div class="feed-no-signal" id="nosignal-CAM_02">Fără semnal</div>
-        </div>
-        <div class="feed-stats" id="feedstats-CAM_02"></div>
-      </div>
-
-      <div class="feed-card">
-        <div class="feed-title">Lounge <span class="feed-id">CAM_03</span></div>
-        <div class="feed-img-wrapper">
-          <img id="feed-CAM_03" class="feed-img" alt="CAM_03" />
-          <div class="feed-no-signal" id="nosignal-CAM_03">Fără semnal</div>
-        </div>
-        <div class="feed-stats" id="feedstats-CAM_03"></div>
-      </div>
-
-      <div class="feed-card">
-        <div class="feed-title">Departure Gate <span class="feed-id">CAM_04</span></div>
-        <div class="feed-img-wrapper">
-          <img id="feed-CAM_04" class="feed-img" alt="CAM_04" />
-          <div class="feed-no-signal" id="nosignal-CAM_04">Fără semnal</div>
-        </div>
-        <div class="feed-stats" id="feedstats-CAM_04"></div>
-      </div>
-    </div>
-  </main>
-
-  <!-- ── Page: Notificări Personal ───────────────────────── -->
-  <main id="page-notify" style="display:none">
-    <section class="section-title" style="margin-top:32px">
-      <h2>📣 Notificări Personal</h2>
-      <p>Trimite un mesaj direct echipei de la o locație specifică</p>
-    </section>
-
-    <div class="notify-card">
-      <div class="notify-field">
-        <label class="notify-label">Destinatar</label>
-        <select id="notifyRecipient" class="notify-select">
-          <option value="checkin">Check-In</option>
-          <option value="security">Security</option>
-          <option value="lounge">Lounge</option>
-          <option value="gate">Departure Gate</option>
-        </select>
-      </div>
-
-      <div class="notify-field">
-        <label class="notify-label">Mesaj</label>
-        <textarea id="notifyMessage" class="notify-textarea"
-          placeholder="Scrie mesajul pentru echipă..." rows="4"></textarea>
-      </div>
-
-      <div class="notify-footer">
-        <div id="notifyStatus" class="notify-status"></div>
-        <button id="notifyBtn" class="notify-send-btn" onclick="sendNotification()">
-          &#9654; Trimite notificarea
+        <span class="last-update" id="lastUpdate"></span>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Schimbă tema">
+          <i class="bi bi-moon-fill" id="themeIconMoon"></i>
+          <i class="bi bi-sun-fill"  id="themeIconSun" style="display:none"></i>
         </button>
       </div>
-    </div>
+    </header>
 
-    <div class="notify-info">
-      <div class="notify-info-title">Topicuri ntfy.sh active</div>
-      <div class="notify-topics">
-        <span class="notify-topic-badge">airport-satisfaction-checkin</span>
-        <span class="notify-topic-badge">airport-satisfaction-security</span>
-        <span class="notify-topic-badge">airport-satisfaction-lounge</span>
-        <span class="notify-topic-badge">airport-satisfaction-gate</span>
-      </div>
-    </div>
-  </main>
+    <!-- Scrollable content -->
+    <div class="content">
+
+      <!-- ── Page: Dashboard ──────────────────────────────── -->
+      <main id="page-dashboard">
+
+        <div class="section-header">
+          <h3 class="section-title">Stare Curentă — Live</h3>
+          <p class="section-sub">Actualizat la fiecare 5 secunde</p>
+        </div>
+
+        <div class="live-grid" id="liveGrid"></div>
+
+        <div class="section-header" style="margin-top:32px">
+          <h3 class="section-title">Heatmap Terminal</h3>
+          <p class="section-sub">Locația camerelor de supraveghere</p>
+        </div>
+
+        <div class="heatmap-container">
+          <svg id="airportSvg" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+
+            <!-- ── Airport map background ── -->
+            <image href="misc/Airport_map.png" x="0" y="0" width="800" height="400"
+                   preserveAspectRatio="xMidYMid meet" class="airport-map-img" />
+
+            <!-- Dark mode overlay -->
+            <rect x="0" y="0" width="800" height="400" class="svg-dark-overlay" pointer-events="none" />
+
+            <!-- ── Camera markers ── -->
+            <g id="marker-CAM_01" class="cam-marker" transform="translate(515,350)">
+              <circle r="28" class="cam-ring" />
+              <circle r="22" class="cam-circle cam-circle-idle" id="circle-CAM_01" />
+              <text y="5"   text-anchor="middle" class="cam-label-inner" font-size="9" font-family="Arial" font-weight="bold">CHECK-IN</text>
+              <text y="-35" text-anchor="middle" class="cam-label-outer" font-size="10" font-family="Arial" id="label-CAM_01">--</text>
+            </g>
+
+            <g id="marker-CAM_02" class="cam-marker" transform="translate(270,275)">
+              <circle r="28" class="cam-ring" />
+              <circle r="22" class="cam-circle cam-circle-idle" id="circle-CAM_02" />
+              <text y="5"   text-anchor="middle" class="cam-label-inner" font-size="9" font-family="Arial" font-weight="bold">SECURITY</text>
+              <text y="-35" text-anchor="middle" class="cam-label-outer" font-size="10" font-family="Arial" id="label-CAM_02">--</text>
+            </g>
+
+            <g id="marker-CAM_03" class="cam-marker" transform="translate(170,170)">
+              <circle r="28" class="cam-ring" />
+              <circle r="22" class="cam-circle cam-circle-idle" id="circle-CAM_03" />
+              <text y="5"   text-anchor="middle" class="cam-label-inner" font-size="9" font-family="Arial" font-weight="bold">LOUNGE</text>
+              <text y="-35" text-anchor="middle" class="cam-label-outer" font-size="10" font-family="Arial" id="label-CAM_03">--</text>
+            </g>
+
+            <g id="marker-CAM_04" class="cam-marker" transform="translate(150,50)">
+              <circle r="28" class="cam-ring" />
+              <circle r="22" class="cam-circle cam-circle-idle" id="circle-CAM_04" />
+              <text y="5"   text-anchor="middle" class="cam-label-inner" font-size="9" font-family="Arial" font-weight="bold">GATE</text>
+              <text y="-35" text-anchor="middle" class="cam-label-outer" font-size="10" font-family="Arial" id="label-CAM_04">--</text>
+            </g>
+
+            <!-- ── Legend ── -->
+            <g transform="translate(12,358)">
+              <rect x="-6" y="-14" width="220" height="22" rx="6" class="legend-bg" />
+              <circle cx="8"   cy="0" r="5" fill="#22c55e" />
+              <text x="18"  y="4" class="legend-txt" font-size="10" font-family="Arial">Satisfăcut</text>
+              <circle cx="100" cy="0" r="5" fill="#f59e0b" />
+              <text x="110" y="4" class="legend-txt" font-size="10" font-family="Arial">Neutru</text>
+              <circle cx="175" cy="0" r="5" fill="#ef4444" />
+              <text x="185" y="4" class="legend-txt" font-size="10" font-family="Arial">Supărat</text>
+            </g>
+          </svg>
+          <div class="tooltip" id="tooltip"></div>
+        </div>
+
+        <div class="section-header history-header" style="margin-top:32px">
+          <div>
+            <h3 class="section-title">Evoluție Istorică</h3>
+            <p class="section-sub">Medie agregată la 15 minute</p>
+          </div>
+          <div class="history-controls">
+            <select id="camSelect">
+              <option value="">Toate camerele (medie)</option>
+              <option value="CAM_01">Check-In</option>
+              <option value="CAM_02">Security</option>
+              <option value="CAM_03">Lounge</option>
+              <option value="CAM_04">Departure Gate</option>
+            </select>
+            <select id="rangeSelect">
+              <option value="1">Ultima 1 oră</option>
+              <option value="6">Ultimele 6 ore</option>
+              <option value="24" selected>Ultimele 24 ore</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="historyChart"></canvas>
+        </div>
+
+      </main>
+
+      <!-- ── Page: Camere Live ─────────────────────────────── -->
+      <main id="page-cameras" style="display:none">
+        <div class="section-header">
+          <h3 class="section-title">Camere Live</h3>
+          <p class="section-sub">Frame-uri adnotate în timp real cu detectarea emoțiilor</p>
+        </div>
+
+        <div class="feed-grid">
+          <div class="feed-card">
+            <div class="feed-title">Check-In <span class="feed-id">CAM_01</span></div>
+            <div class="feed-img-wrapper">
+              <img id="feed-CAM_01" class="feed-img" alt="CAM_01" />
+              <div class="feed-no-signal" id="nosignal-CAM_01">
+                <i class="bi bi-camera-video-off"></i><span>Fără semnal</span>
+              </div>
+            </div>
+            <div class="feed-stats" id="feedstats-CAM_01"></div>
+          </div>
+
+          <div class="feed-card">
+            <div class="feed-title">Security <span class="feed-id">CAM_02</span></div>
+            <div class="feed-img-wrapper">
+              <img id="feed-CAM_02" class="feed-img" alt="CAM_02" />
+              <div class="feed-no-signal" id="nosignal-CAM_02">
+                <i class="bi bi-camera-video-off"></i><span>Fără semnal</span>
+              </div>
+            </div>
+            <div class="feed-stats" id="feedstats-CAM_02"></div>
+          </div>
+
+          <div class="feed-card">
+            <div class="feed-title">Lounge <span class="feed-id">CAM_03</span></div>
+            <div class="feed-img-wrapper">
+              <img id="feed-CAM_03" class="feed-img" alt="CAM_03" />
+              <div class="feed-no-signal" id="nosignal-CAM_03">
+                <i class="bi bi-camera-video-off"></i><span>Fără semnal</span>
+              </div>
+            </div>
+            <div class="feed-stats" id="feedstats-CAM_03"></div>
+          </div>
+
+          <div class="feed-card">
+            <div class="feed-title">Departure Gate <span class="feed-id">CAM_04</span></div>
+            <div class="feed-img-wrapper">
+              <img id="feed-CAM_04" class="feed-img" alt="CAM_04" />
+              <div class="feed-no-signal" id="nosignal-CAM_04">
+                <i class="bi bi-camera-video-off"></i><span>Fără semnal</span>
+              </div>
+            </div>
+            <div class="feed-stats" id="feedstats-CAM_04"></div>
+          </div>
+        </div>
+      </main>
+
+      <!-- ── Page: Notificări Personal ────────────────────── -->
+      <main id="page-notify" style="display:none">
+        <div class="section-header">
+          <h3 class="section-title">Notificări Personal</h3>
+          <p class="section-sub">Trimite un mesaj direct echipei de la o locație specifică</p>
+        </div>
+
+        <div class="notify-card">
+          <div class="notify-field">
+            <label class="notify-label">Destinatar</label>
+            <select id="notifyRecipient" class="notify-select">
+              <option value="checkin">Check-In</option>
+              <option value="security">Security</option>
+              <option value="lounge">Lounge</option>
+              <option value="gate">Departure Gate</option>
+            </select>
+          </div>
+          <div class="notify-field">
+            <label class="notify-label">Mesaj</label>
+            <textarea id="notifyMessage" class="notify-textarea"
+              placeholder="Scrie mesajul pentru echipă..." rows="4"></textarea>
+          </div>
+          <div class="notify-footer">
+            <div id="notifyStatus" class="notify-status"></div>
+            <button id="notifyBtn" class="notify-send-btn" onclick="sendNotification()">
+              <i class="bi bi-send"></i> Trimite notificarea
+            </button>
+          </div>
+        </div>
+
+        <div class="notify-info">
+          <div class="notify-info-title">Topicuri ntfy.sh active</div>
+          <div class="notify-topics">
+            <span class="notify-topic-badge">airport-satisfaction-checkin</span>
+            <span class="notify-topic-badge">airport-satisfaction-security</span>
+            <span class="notify-topic-badge">airport-satisfaction-lounge</span>
+            <span class="notify-topic-badge">airport-satisfaction-gate</span>
+          </div>
+        </div>
+      </main>
+
+    </div><!-- /content -->
+  </div><!-- /main-area -->
 
   <script src="app.js"></script>
 </body>
