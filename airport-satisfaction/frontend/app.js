@@ -250,12 +250,55 @@ function refreshFeeds() {
   });
 }
 
+// ── Staff Notifications ───────────────────────────────────────────
+async function sendNotification() {
+  const recipient = document.getElementById("notifyRecipient").value;
+  const message   = document.getElementById("notifyMessage").value.trim();
+  const btn       = document.getElementById("notifyBtn");
+  const status    = document.getElementById("notifyStatus");
+
+  if (!message) {
+    status.textContent = "⚠️ Mesajul nu poate fi gol.";
+    status.className = "notify-status error";
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = "Se trimite...";
+  status.className = "notify-status";
+
+  try {
+    const res = await fetch(`${API_BASE}/api/notify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient, message }),
+    });
+    if (res.ok) {
+      const recipientLabel = document.getElementById("notifyRecipient").selectedOptions[0].text;
+      status.textContent = `✅ Mesaj trimis către ${recipientLabel}.`;
+      status.className = "notify-status success";
+      document.getElementById("notifyMessage").value = "";
+    } else {
+      const err = await res.json();
+      status.textContent = `❌ Eroare: ${err.detail}`;
+      status.className = "notify-status error";
+    }
+  } catch (e) {
+    status.textContent = "❌ Nu s-a putut contacta serverul.";
+    status.className = "notify-status error";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ── Page Navigation ───────────────────────────────────────────────
+const _pages = ["dashboard", "cameras", "notify"];
 let _feedInterval = null;
 
 function showPage(page) {
-  document.getElementById("page-dashboard").style.display = page === "dashboard" ? "" : "none";
-  document.getElementById("page-cameras").style.display   = page === "cameras"   ? "" : "none";
+  _pages.forEach(p => {
+    document.getElementById(`page-${p}`).style.display = p === page ? "" : "none";
+  });
 
   document.querySelectorAll(".nav-item").forEach(el => {
     el.classList.toggle("active", el.getAttribute("onclick").includes(page));

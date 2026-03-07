@@ -17,10 +17,11 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from sqlalchemy import desc
 import base64
+import httpx
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from config import CAMERAS
+from config import CAMERAS, NTFY_BASE_URL
 from backend.database import init_db, get_db
 from backend.models import LiveStatus, History
 from backend.aggregator import start_scheduler, buffer_frame
@@ -47,8 +48,21 @@ def on_startup():
 
 
 # ── Schemas ──────────────────────────────────────────────────
+_STAFF_TOPICS = {
+    "checkin":  "airport-satisfaction-checkin",
+    "security": "airport-satisfaction-security",
+    "lounge":   "airport-satisfaction-lounge",
+    "gate":     "airport-satisfaction-gate",
+}
+
+
 class FrameJpeg(BaseModel):
     frame_b64: str
+
+
+class NotifyRequest(BaseModel):
+    recipient: str   # checkin | security | lounge | gate
+    message:   str
 
 
 class FrameUpdate(BaseModel):
@@ -159,6 +173,29 @@ def get_frame(camera_id: str):
     if camera_id not in _latest_frames:
         raise HTTPException(status_code=404, detail="No frame available yet")
     return Response(content=_latest_frames[camera_id], media_type="image/jpeg")
+
+
+@app.post("/api/notify")
+def send_staff_notification(data: NotifyRequest):
+    """Send a custom message to a staff ntfy.sh topic."""
+    topic = _STAFF_TOPICS.get(data.recipient)
+    if not topic:
+        raise HTTPException(status_code=400, detail="Invalid recipient")
+    if not data.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    url = f"https://ntfy.sh/{topic}"
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            client.post(url, content=data.message.encode("utf-8"), headers={
+                "Title": "Mesaj Supervisor",
+                "Priority": "default",
+                "Tags": "loudspeaker",
+            })
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"ntfy.sh error: {e}")
+
+    return {"status": "ok", "topic": topic}
 
 
 if __name__ == "__main__":

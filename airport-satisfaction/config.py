@@ -30,7 +30,7 @@ AGGREGATION_INTERVAL_MINUTES = 3
 DATA_RETENTION_DAYS = 30
 
 # ── Alert Logic ───────────────────────────────────────────────
-ALERT_SAD_THRESHOLD = 50.0
+ALERT_SAD_THRESHOLD = 90.0
 ALERT_CONSECUTIVE_FRAMES = 3
 ALERT_COOLDOWN_MINUTES = 10
 NTFY_TOPIC = "airport-satisfaction-alerts"
