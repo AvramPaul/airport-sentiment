@@ -43,6 +43,25 @@
         <i class="bi bi-megaphone"></i>
         <span>Notificări Personal</span>
       </button>
+
+      <div class="nav-group-label">Zone Camere</div>
+
+      <button class="nav-item" data-page="checkin" onclick="showPage('checkin')">
+        <i class="bi bi-ticket-perforated"></i>
+        <span>Check-In</span>
+      </button>
+      <button class="nav-item" data-page="security" onclick="showPage('security')">
+        <i class="bi bi-shield-check"></i>
+        <span>Security</span>
+      </button>
+      <button class="nav-item" data-page="lounge" onclick="showPage('lounge')">
+        <i class="bi bi-cup-hot"></i>
+        <span>Lounge</span>
+      </button>
+      <button class="nav-item" data-page="gate" onclick="showPage('gate')">
+        <i class="bi bi-door-open"></i>
+        <span>Departure Gate</span>
+      </button>
     </nav>
   </aside>
 
@@ -128,9 +147,9 @@
               <circle cx="8"   cy="0" r="5" fill="#22c55e" />
               <text x="18"  y="4" class="legend-txt" font-size="10" font-family="Arial">Satisfăcut</text>
               <circle cx="100" cy="0" r="5" fill="#f59e0b" />
-              <text x="110" y="4" class="legend-txt" font-size="10" font-family="Arial">Neutru</text>
+              <text x="110" y="4" class="legend-txt" font-size="10" font-family="Arial">Neutral</text>
               <circle cx="175" cy="0" r="5" fill="#ef4444" />
-              <text x="185" y="4" class="legend-txt" font-size="10" font-family="Arial">Supărat</text>
+              <text x="185" y="4" class="legend-txt" font-size="10" font-family="Arial">Stressed</text>
             </g>
           </svg>
           <div class="tooltip" id="tooltip"></div>
@@ -255,6 +274,263 @@
             <span class="notify-topic-badge">airport-satisfaction-lounge</span>
             <span class="notify-topic-badge">airport-satisfaction-gate</span>
           </div>
+        </div>
+      </main>
+
+      <!-- ── Page: Check-In ────────────────────────────────── -->
+      <main id="page-checkin" style="display:none">
+        <div class="section-header">
+          <h3 class="section-title">Check-In</h3>
+          <p class="section-sub">CAM_01 · Informații zonă în timp real</p>
+        </div>
+
+        <div class="zone-top-grid">
+          <div class="feed-card">
+            <div class="feed-title">Check-In <span class="feed-id">CAM_01</span></div>
+            <div class="feed-img-wrapper">
+              <img id="zfeed-CAM_01" class="feed-img" alt="CAM_01" />
+              <div class="feed-no-signal" id="znosignal-CAM_01">
+                <i class="bi bi-camera-video-off"></i><span>Fără semnal</span>
+              </div>
+            </div>
+            <div class="feed-stats" id="zfeedstats-CAM_01"></div>
+          </div>
+
+          <div class="zone-stats-card">
+            <div class="zone-stats-title">Statistici Zonă</div>
+            <div class="zone-stat-row"><span>Ghișee disponibile</span><strong>6</strong></div>
+            <div class="zone-stat-row"><span>Ghișee funcționale</span><strong id="zstat-checkin-active">—</strong></div>
+            <div class="zone-stat-row"><span>Angajați în zonă</span><strong id="zstat-checkin-staff">—</strong></div>
+            <div class="zone-stat-row"><span>Persoane în zonă</span><strong id="zstat-checkin-persons">—</strong></div>
+          </div>
+        </div>
+
+        <div class="section-header" style="margin-top:24px">
+          <h3 class="section-title">Evoluție Istorică</h3>
+          <p class="section-sub">Medie agregată la 15 minute — Check-In</p>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartCheckin"></canvas>
+        </div>
+
+        <div class="section-header" style="margin-top:8px">
+          <h3 class="section-title">Zboruri — Oradea OMR</h3>
+          <p class="section-sub">Sosiri programate</p>
+        </div>
+        <div class="flights-card">
+          <table class="flights-table">
+            <thead>
+              <tr>
+                <th>Companie</th>
+                <th>Cod zbor</th>
+                <th>Ora sosirii</th>
+                <th>Origine</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="airline-name">Lufthansa</span></td>
+                <td class="flight-code">LH2542</td>
+                <td class="flight-time">13:30</td>
+                <td>München</td>
+                <td><span class="flight-status delayed">Întârziere 20 min</span></td>
+              </tr>
+              <tr>
+                <td><span class="airline-name">HiSky Europe</span></td>
+                <td class="flight-code">H471</td>
+                <td class="flight-time">16:40</td>
+                <td>Londra Stansted</td>
+                <td><span class="flight-status scheduled">Programat</span></td>
+              </tr>
+              <tr>
+                <td><span class="airline-name">Tarom</span></td>
+                <td class="flight-code">RO627</td>
+                <td class="flight-time">16:45</td>
+                <td>București Otopeni</td>
+                <td><span class="flight-status scheduled">Programat</span></td>
+              </tr>
+              <tr>
+                <td><span class="airline-name">HiSky</span></td>
+                <td class="flight-code">H4764</td>
+                <td class="flight-time">06:50</td>
+                <td>București Otopeni</td>
+                <td><span class="flight-status scheduled">Programat</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+
+      <!-- ── Page: Security ────────────────────────────────── -->
+      <main id="page-security" style="display:none">
+        <div class="section-header">
+          <h3 class="section-title">Security</h3>
+          <p class="section-sub">CAM_02 · Informații zonă în timp real</p>
+        </div>
+
+        <div class="zone-top-grid">
+          <div class="feed-card">
+            <div class="feed-title">Security <span class="feed-id">CAM_02</span></div>
+            <div class="feed-img-wrapper">
+              <img id="zfeed-CAM_02" class="feed-img" alt="CAM_02" />
+              <div class="feed-no-signal" id="znosignal-CAM_02">
+                <i class="bi bi-camera-video-off"></i><span>Fără semnal</span>
+              </div>
+            </div>
+            <div class="feed-stats" id="zfeedstats-CAM_02"></div>
+          </div>
+
+          <div class="zone-stats-card">
+            <div class="zone-stats-title">Statistici Zonă</div>
+            <div class="zone-stat-row"><span>Linii de control</span><strong>4</strong></div>
+            <div class="zone-stat-row"><span>Linii active</span><strong id="zstat-security-active">—</strong></div>
+            <div class="zone-stat-row"><span>Angajați în zonă</span><strong id="zstat-security-staff">—</strong></div>
+            <div class="zone-stat-row"><span>Pasageri în coadă</span><strong id="zstat-security-persons">—</strong></div>
+          </div>
+        </div>
+
+        <div class="section-header" style="margin-top:24px">
+          <h3 class="section-title">Evoluție Istorică</h3>
+          <p class="section-sub">Medie agregată la 15 minute — Security</p>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartSecurity"></canvas>
+        </div>
+      </main>
+
+      <!-- ── Page: Lounge ──────────────────────────────────── -->
+      <main id="page-lounge" style="display:none">
+        <div class="section-header">
+          <h3 class="section-title">Lounge</h3>
+          <p class="section-sub">CAM_03 · Informații zonă în timp real</p>
+        </div>
+
+        <div class="zone-top-grid">
+          <div class="feed-card">
+            <div class="feed-title">Lounge <span class="feed-id">CAM_03</span></div>
+            <div class="feed-img-wrapper">
+              <img id="zfeed-CAM_03" class="feed-img" alt="CAM_03" />
+              <div class="feed-no-signal" id="znosignal-CAM_03">
+                <i class="bi bi-camera-video-off"></i><span>Fără semnal</span>
+              </div>
+            </div>
+            <div class="feed-stats" id="zfeedstats-CAM_03"></div>
+          </div>
+
+          <div class="zone-stats-card">
+            <div class="zone-stats-title">Statistici Zonă</div>
+            <div class="zone-stat-row"><span>Capacitate totală</span><strong>40</strong></div>
+            <div class="zone-stat-row"><span>Angajați în zonă</span><strong id="zstat-lounge-staff">—</strong></div>
+            <div class="zone-stat-row"><span>Persoane prezente</span><strong id="zstat-lounge-persons">—</strong></div>
+            <div class="zone-stats-title" style="margin-top:16px">Condiții habitaclu</div>
+            <div class="zone-stat-row">
+              <span>Temperatură</span>
+              <strong id="zstat-lounge-temp">—</strong>
+            </div>
+            <div class="zone-stat-row">
+              <span>Umiditate</span>
+              <strong id="zstat-lounge-humidity">—</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-header" style="margin-top:24px">
+          <h3 class="section-title">Evoluție Istorică</h3>
+          <p class="section-sub">Medie agregată la 15 minute — Lounge</p>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartLounge"></canvas>
+        </div>
+      </main>
+
+      <!-- ── Page: Departure Gate ──────────────────────────── -->
+      <main id="page-gate" style="display:none">
+        <div class="section-header">
+          <h3 class="section-title">Departure Gate</h3>
+          <p class="section-sub">CAM_04 · Informații zonă în timp real</p>
+        </div>
+
+        <div class="zone-top-grid">
+          <div class="feed-card">
+            <div class="feed-title">Departure Gate <span class="feed-id">CAM_04</span></div>
+            <div class="feed-img-wrapper">
+              <img id="zfeed-CAM_04" class="feed-img" alt="CAM_04" />
+              <div class="feed-no-signal" id="znosignal-CAM_04">
+                <i class="bi bi-camera-video-off"></i><span>Fără semnal</span>
+              </div>
+            </div>
+            <div class="feed-stats" id="zfeedstats-CAM_04"></div>
+          </div>
+
+          <div class="zone-stats-card">
+            <div class="zone-stats-title">Statistici Zonă</div>
+            <div class="zone-stat-row"><span>Porți disponibile</span><strong>3</strong></div>
+            <div class="zone-stat-row"><span>Porți active</span><strong id="zstat-gate-active">—</strong></div>
+            <div class="zone-stat-row"><span>Angajați în zonă</span><strong id="zstat-gate-staff">—</strong></div>
+            <div class="zone-stat-row"><span>Pasageri în așteptare</span><strong id="zstat-gate-persons">—</strong></div>
+          </div>
+        </div>
+
+        <div class="section-header" style="margin-top:24px">
+          <h3 class="section-title">Evoluție Istorică</h3>
+          <p class="section-sub">Medie agregată la 15 minute — Departure Gate</p>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartGate"></canvas>
+        </div>
+
+        <div class="section-header" style="margin-top:8px">
+          <h3 class="section-title">Zboruri — Oradea OMR</h3>
+          <p class="section-sub">Îmbarcare cu 30 de minute înainte de decolare</p>
+        </div>
+        <div class="flights-card">
+          <table class="flights-table">
+            <thead>
+              <tr>
+                <th>Companie</th>
+                <th>Cod zbor</th>
+                <th>Ora decolării</th>
+                <th>Ora îmbarcării</th>
+                <th>Origine</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="airline-name">Lufthansa</span></td>
+                <td class="flight-code">LH2542</td>
+                <td class="flight-time">13:30</td>
+                <td class="flight-time">13:00</td>
+                <td>München</td>
+                <td><span class="flight-status delayed">Întârziere 20 min</span></td>
+              </tr>
+              <tr>
+                <td><span class="airline-name">HiSky Europe</span></td>
+                <td class="flight-code">H471</td>
+                <td class="flight-time">16:40</td>
+                <td class="flight-time">16:10</td>
+                <td>Londra Stansted</td>
+                <td><span class="flight-status scheduled">Programat</span></td>
+              </tr>
+              <tr>
+                <td><span class="airline-name">Tarom</span></td>
+                <td class="flight-code">RO627</td>
+                <td class="flight-time">16:45</td>
+                <td class="flight-time">16:15</td>
+                <td>București Otopeni</td>
+                <td><span class="flight-status scheduled">Programat</span></td>
+              </tr>
+              <tr>
+                <td><span class="airline-name">HiSky</span></td>
+                <td class="flight-code">H4764</td>
+                <td class="flight-time">06:50</td>
+                <td class="flight-time">06:20</td>
+                <td>București Otopeni</td>
+                <td><span class="flight-status scheduled">Programat</span></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </main>
 

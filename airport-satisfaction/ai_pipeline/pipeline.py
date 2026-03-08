@@ -27,7 +27,7 @@ _EMOTION_COLOR = {
     "neutral": (11, 158, 245),   # amber
     "sad":     (68,  68, 239),   # red
 }
-_EMOTION_LABEL = {"happy": "Fericit", "neutral": "Neutru", "sad": "Suparat"}
+_EMOTION_LABEL = {"happy": "Happy", "neutral": "Neutral", "sad": "Suparat"}
 
 
 def process_frame(camera_id: str, frame: np.ndarray):

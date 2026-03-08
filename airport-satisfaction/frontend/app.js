@@ -10,6 +10,10 @@ const PAGE_TITLES = {
   dashboard: "Dashboard",
   cameras:   "Camere Live",
   notify:    "Notificări Personal",
+  checkin:   "Check-In",
+  security:  "Security",
+  lounge:    "Lounge",
+  gate:      "Departure Gate",
 };
 
 // ── State ──────────────────────────────────────────────────────
@@ -56,6 +60,10 @@ function toggleTheme() {
   localStorage.setItem("theme", next);
   syncThemeIcon();
   if (historyChart) fetchHistory();   // re-render with new palette
+  const activeZone = ZONE_PAGES.find(p =>
+    document.getElementById(`page-${p}`).style.display !== "none"
+  );
+  if (activeZone) fetchZoneHistory(activeZone);
 }
 
 function syncThemeIcon() {
@@ -65,7 +73,7 @@ function syncThemeIcon() {
 }
 
 // ── Live Cards ─────────────────────────────────────────────────
-const DOM_LABEL = { happy: "😊 Fericit",  neutral: "😐 Neutru",  sad: "😠 Supărat" };
+const DOM_LABEL = { happy: "😊 Happy",  neutral: "😐 Neutral",  sad: "😠 Stressed" };
 const DOM_COLOR = { happy: "#22c55e",     neutral: "#f59e0b",    sad: "#ef4444"    };
 
 function renderCards(cameras) {
@@ -102,15 +110,15 @@ function renderCards(cameras) {
       </div>
 
       <div class="emotion-row">
-        <div class="emotion-label"><span>😊 Fericit</span><strong>${cam.happy}%</strong></div>
+        <div class="emotion-label"><span>😊 Happy</span><strong>${cam.happy}%</strong></div>
         <div class="bar-track"><div class="bar-fill bar-happy" style="width:${cam.happy}%"></div></div>
       </div>
       <div class="emotion-row">
-        <div class="emotion-label"><span>😐 Neutru</span><strong>${cam.neutral}%</strong></div>
+        <div class="emotion-label"><span>😐 Neutral</span><strong>${cam.neutral}%</strong></div>
         <div class="bar-track"><div class="bar-fill bar-neutral" style="width:${cam.neutral}%"></div></div>
       </div>
       <div class="emotion-row">
-        <div class="emotion-label"><span>😠 Supărat</span><strong>${cam.sad}%</strong></div>
+        <div class="emotion-label"><span>😠 Stressed</span><strong>${cam.sad}%</strong></div>
         <div class="bar-track"><div class="bar-fill bar-sad" style="width:${cam.sad}%"></div></div>
       </div>
 
@@ -137,9 +145,9 @@ function updateHeatmap(cameras) {
       marker.onmouseenter = () => {
         tooltip.innerHTML = `
           <strong>${cam.camera_name}</strong><br>
-          😊 Fericit: ${cam.happy}%<br>
-          😐 Neutru: ${cam.neutral}%<br>
-          😠 Supărat: ${cam.sad}%<br>
+          😊 Happy: ${cam.happy}%<br>
+          😐 Neutral: ${cam.neutral}%<br>
+          😠 Stressed: ${cam.sad}%<br>
           👥 ${cam.total_persons} persoane
         `;
         tooltip.classList.add("visible");
@@ -219,9 +227,9 @@ function renderChart(data, camId) {
     data: {
       labels,
       datasets: [
-        { label: "😊 Fericit %",  data: happySet,   borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,.1)",   tension: 0.4, fill: true  },
-        { label: "😐 Neutru %",   data: neutralSet, borderColor: "#f59e0b", backgroundColor: "rgba(245,158,11,.07)", tension: 0.4, fill: false },
-        { label: "😠 Supărat %",  data: sadSet,     borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,.07)",  tension: 0.4, fill: false },
+        { label: "😊 Happy %",  data: happySet,   borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,.1)",   tension: 0.4, fill: true  },
+        { label: "😐 Neutral %",   data: neutralSet, borderColor: "#f59e0b", backgroundColor: "rgba(245,158,11,.07)", tension: 0.4, fill: false },
+        { label: "😠 Stressed %",  data: sadSet,     borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,.07)",  tension: 0.4, fill: false },
       ],
     },
     options: {
@@ -264,17 +272,17 @@ function refreshFeeds() {
       stats.innerHTML = `
         <div class="feed-stat-row">
           <span class="feed-emotion-dot" style="background:var(--happy)"></span>
-          <span>Fericit</span><strong>${cam.happy}%</strong>
+          <span>Happy</span><strong>${cam.happy}%</strong>
           <div class="feed-bar-track"><div class="feed-bar-fill" style="width:${cam.happy}%;background:var(--happy)"></div></div>
         </div>
         <div class="feed-stat-row">
           <span class="feed-emotion-dot" style="background:var(--neutral)"></span>
-          <span>Neutru</span><strong>${cam.neutral}%</strong>
+          <span>Neutral</span><strong>${cam.neutral}%</strong>
           <div class="feed-bar-track"><div class="feed-bar-fill" style="width:${cam.neutral}%;background:var(--neutral)"></div></div>
         </div>
         <div class="feed-stat-row">
           <span class="feed-emotion-dot" style="background:var(--sad)"></span>
-          <span>Supărat</span><strong>${cam.sad}%</strong>
+          <span>Stressed</span><strong>${cam.sad}%</strong>
           <div class="feed-bar-track"><div class="feed-bar-fill" style="width:${cam.sad}%;background:var(--sad)"></div></div>
         </div>
         <div class="feed-persons">👥 ${cam.total_persons} persoane detectate</div>
@@ -324,8 +332,163 @@ async function sendNotification() {
   }
 }
 
+// ── Zone Dashboards ────────────────────────────────────────────
+const ZONE_CONFIG = {
+  checkin:  { camId: "CAM_01", canvasId: "chartCheckin" },
+  security: { camId: "CAM_02", canvasId: "chartSecurity" },
+  lounge:   { camId: "CAM_03", canvasId: "chartLounge" },
+  gate:     { camId: "CAM_04", canvasId: "chartGate" },
+};
+const ZONE_PAGES = Object.keys(ZONE_CONFIG);
+
+const _zoneCharts = {};
+let _zoneFeedInterval = null;
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function initZoneStats() {
+  document.getElementById("zstat-checkin-active").textContent   = randInt(2, 4);
+  document.getElementById("zstat-checkin-staff").textContent    = randInt(3, 9);
+  document.getElementById("zstat-checkin-persons").textContent  = randInt(5, 20);
+  document.getElementById("zstat-security-active").textContent  = randInt(2, 3);
+  document.getElementById("zstat-security-staff").textContent   = randInt(4, 8);
+  document.getElementById("zstat-security-persons").textContent = randInt(3, 15);
+  document.getElementById("zstat-lounge-staff").textContent     = randInt(2, 5);
+  document.getElementById("zstat-lounge-persons").textContent   = randInt(8, 35);
+  document.getElementById("zstat-gate-active").textContent      = randInt(1, 3);
+  document.getElementById("zstat-gate-staff").textContent       = randInt(2, 6);
+  document.getElementById("zstat-gate-persons").textContent     = randInt(10, 50);
+}
+
+// ── Lounge climate simulation ───────────────────────────────────
+let _loungeTemp     = 22.3;
+let _loungeHumidity = 48;
+
+function initLoungeClimate() {
+  document.getElementById("zstat-lounge-temp").textContent     = _loungeTemp.toFixed(1) + " °C";
+  document.getElementById("zstat-lounge-humidity").textContent = _loungeHumidity + " %";
+}
+
+function tickLoungeTemp() {
+  // ~40% chance to drift ±0.1, stays within 21.0–23.5 °C
+  if (Math.random() < 0.4) {
+    const delta = Math.random() < 0.5 ? 0.1 : -0.1;
+    _loungeTemp = Math.min(23.5, Math.max(21.0, +(_loungeTemp + delta).toFixed(1)));
+    document.getElementById("zstat-lounge-temp").textContent = _loungeTemp.toFixed(1) + " °C";
+  }
+}
+
+function tickLoungeHumidity() {
+  // ~30% chance to drift ±1, stays within 40–60 %
+  if (Math.random() < 0.3) {
+    const delta = Math.random() < 0.5 ? 1 : -1;
+    _loungeHumidity = Math.min(60, Math.max(40, _loungeHumidity + delta));
+    document.getElementById("zstat-lounge-humidity").textContent = _loungeHumidity + " %";
+  }
+}
+
+function updateZoneStatsSlow() {
+  document.getElementById("zstat-checkin-active").textContent   = randInt(2, 4);
+  document.getElementById("zstat-checkin-staff").textContent    = randInt(3, 9);
+  document.getElementById("zstat-security-active").textContent  = randInt(2, 3);
+  document.getElementById("zstat-security-staff").textContent   = randInt(4, 8);
+  document.getElementById("zstat-lounge-staff").textContent     = randInt(2, 5);
+  document.getElementById("zstat-gate-active").textContent      = randInt(1, 3);
+  document.getElementById("zstat-gate-staff").textContent       = randInt(2, 6);
+}
+
+function updateZoneStatsFast() {
+  document.getElementById("zstat-checkin-persons").textContent  = randInt(5, 20);
+  document.getElementById("zstat-security-persons").textContent = randInt(3, 15);
+  document.getElementById("zstat-lounge-persons").textContent   = randInt(8, 35);
+  document.getElementById("zstat-gate-persons").textContent     = randInt(10, 50);
+}
+
+function refreshZoneFeed(camId) {
+  const img      = document.getElementById(`zfeed-${camId}`);
+  const noSignal = document.getElementById(`znosignal-${camId}`);
+  if (!img) return;
+
+  const newSrc = `${API_BASE}/api/frame/${camId}?t=${Date.now()}`;
+  const tester = new Image();
+  tester.onload  = () => { img.src = newSrc; if (noSignal) noSignal.style.display = "none"; };
+  tester.onerror = () => { if (noSignal) noSignal.style.display = "flex"; };
+  tester.src = newSrc;
+
+  const stats = document.getElementById(`zfeedstats-${camId}`);
+  if (stats && liveData[camId]) {
+    const cam = liveData[camId];
+    stats.innerHTML = `
+      <div class="feed-stat-row">
+        <span class="feed-emotion-dot" style="background:var(--happy)"></span>
+        <span>Happy</span><strong>${cam.happy}%</strong>
+        <div class="feed-bar-track"><div class="feed-bar-fill" style="width:${cam.happy}%;background:var(--happy)"></div></div>
+      </div>
+      <div class="feed-stat-row">
+        <span class="feed-emotion-dot" style="background:var(--neutral)"></span>
+        <span>Neutral</span><strong>${cam.neutral}%</strong>
+        <div class="feed-bar-track"><div class="feed-bar-fill" style="width:${cam.neutral}%;background:var(--neutral)"></div></div>
+      </div>
+      <div class="feed-stat-row">
+        <span class="feed-emotion-dot" style="background:var(--sad)"></span>
+        <span>Stressed</span><strong>${cam.sad}%</strong>
+        <div class="feed-bar-track"><div class="feed-bar-fill" style="width:${cam.sad}%;background:var(--sad)"></div></div>
+      </div>
+      <div class="feed-persons">👥 ${cam.total_persons} persoane detectate</div>
+    `;
+  }
+}
+
+async function fetchZoneHistory(zone) {
+  const { camId, canvasId } = ZONE_CONFIG[zone];
+  try {
+    const res  = await fetch(`${API_BASE}/api/history?hours=24&camera_id=${camId}`);
+    const data = await res.json();
+    renderZoneChart(data, zone, canvasId);
+  } catch { /* silent */ }
+}
+
+function renderZoneChart(data, zone, canvasId) {
+  const labels     = data.map(d => formatTime(d.recorded_at));
+  const happySet   = data.map(d => d.happy);
+  const neutralSet = data.map(d => d.neutral);
+  const sadSet     = data.map(d => d.sad);
+  const c = chartColors();
+
+  const ctx = document.getElementById(canvasId).getContext("2d");
+  if (_zoneCharts[zone]) _zoneCharts[zone].destroy();
+
+  _zoneCharts[zone] = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: "😊 Happy %",  data: happySet,   borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,.1)",   tension: 0.4, fill: true  },
+        { label: "😐 Neutral %",   data: neutralSet, borderColor: "#f59e0b", backgroundColor: "rgba(245,158,11,.07)", tension: 0.4, fill: false },
+        { label: "😠 Stressed %",  data: sadSet,     borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,.07)",  tension: 0.4, fill: false },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        x: { ticks: { color: c.tick, maxTicksLimit: 12 }, grid: { color: c.grid } },
+        y: { min: 0, max: 100,
+             ticks: { color: c.tick, callback: v => v + "%" },
+             grid:  { color: c.grid } },
+      },
+      plugins: {
+        legend: { labels: { color: c.legend, padding: 20 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%` } },
+      },
+    },
+  });
+}
+
 // ── Page Navigation ────────────────────────────────────────────
-const _pages = ["dashboard", "cameras", "notify"];
+const _pages = ["dashboard", "cameras", "notify", "checkin", "security", "lounge", "gate"];
 let _feedInterval = null;
 
 function showPage(page) {
@@ -339,11 +502,18 @@ function showPage(page) {
 
   document.getElementById("pageTitle").textContent = PAGE_TITLES[page] || "";
 
+  // Clear all feed intervals
+  if (_feedInterval)     { clearInterval(_feedInterval);     _feedInterval     = null; }
+  if (_zoneFeedInterval) { clearInterval(_zoneFeedInterval); _zoneFeedInterval = null; }
+
   if (page === "cameras") {
     refreshFeeds();
-    if (!_feedInterval) _feedInterval = setInterval(refreshFeeds, FRAME_INTERVAL);
-  } else {
-    if (_feedInterval) { clearInterval(_feedInterval); _feedInterval = null; }
+    _feedInterval = setInterval(refreshFeeds, FRAME_INTERVAL);
+  } else if (ZONE_PAGES.includes(page)) {
+    const camId = ZONE_CONFIG[page].camId;
+    refreshZoneFeed(camId);
+    _zoneFeedInterval = setInterval(() => refreshZoneFeed(camId), FRAME_INTERVAL);
+    fetchZoneHistory(page);
   }
 }
 
@@ -355,5 +525,11 @@ document.getElementById("rangeSelect").addEventListener("change", fetchHistory);
 syncThemeIcon();
 fetchLive();
 fetchHistory();
-setInterval(fetchLive,    LIVE_INTERVAL);
-setInterval(fetchHistory, CHART_INTERVAL);
+initZoneStats();
+initLoungeClimate();
+setInterval(fetchLive,           LIVE_INTERVAL);
+setInterval(fetchHistory,        CHART_INTERVAL);
+setInterval(updateZoneStatsSlow, 10 * 60 * 1000);
+setInterval(updateZoneStatsFast,  2 * 60 * 1000);
+setInterval(tickLoungeTemp,      10 * 1000);
+setInterval(tickLoungeHumidity,  60 * 1000);
