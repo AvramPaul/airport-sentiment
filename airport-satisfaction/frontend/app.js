@@ -8,8 +8,8 @@ const CAMERA_IDS = ["CAM_01", "CAM_02", "CAM_03", "CAM_04"];
 
 const PAGE_TITLES = {
   dashboard: "Dashboard",
-  cameras:   "Camere Live",
-  notify:    "Notificări Personal",
+  cameras:   "Live Cameras",
+  notify:    "Staff Notifications",
   checkin:   "Check-In",
   security:  "Security",
   lounge:    "Lounge",
@@ -104,7 +104,7 @@ function renderCards(cameras) {
             ${DOM_LABEL[dom]}
           </span>
           <div class="card-persons" style="margin-top:6px">
-            <span>${cam.total_persons}</span>persoane
+            <span>${cam.total_persons}</span>people
           </div>
         </div>
       </div>
@@ -122,7 +122,7 @@ function renderCards(cameras) {
         <div class="bar-track"><div class="bar-fill bar-sad" style="width:${cam.sad}%"></div></div>
       </div>
 
-      <div class="card-footer">Actualizat: ${cam.updated_at ? formatTime(cam.updated_at) : "—"}</div>
+      <div class="card-footer">Updated: ${cam.updated_at ? formatTime(cam.updated_at) : "—"}</div>
     `;
   });
 }
@@ -135,6 +135,7 @@ function updateHeatmap(cameras) {
     if (!circle || !label) return;
 
     const color = satisfactionColor(cam);
+    circle.classList.remove("cam-circle-idle");  // idle CSS fill would override the attribute
     circle.setAttribute("fill", color);
     circle.style.filter = `drop-shadow(0 0 8px ${color})`;
     label.textContent   = `${cam.happy}% 😊`;
@@ -148,7 +149,7 @@ function updateHeatmap(cameras) {
           😊 Happy: ${cam.happy}%<br>
           😐 Neutral: ${cam.neutral}%<br>
           😠 Stressed: ${cam.sad}%<br>
-          👥 ${cam.total_persons} persoane
+          👥 ${cam.total_persons} people
         `;
         tooltip.classList.add("visible");
       };
@@ -176,7 +177,7 @@ async function fetchLive() {
     document.getElementById("connectionDot").className    = "status-dot online";
     document.getElementById("connectionLabel").textContent = "Online";
     document.getElementById("lastUpdate").textContent     =
-      `Ultima actualizare: ${new Date().toLocaleTimeString("ro-RO")}`;
+      `Last update: ${new Date().toLocaleTimeString("en-GB")}`;
   } catch {
     document.getElementById("connectionDot").className    = "status-dot offline";
     document.getElementById("connectionLabel").textContent = "Offline";
@@ -285,7 +286,7 @@ function refreshFeeds() {
           <span>Stressed</span><strong>${cam.sad}%</strong>
           <div class="feed-bar-track"><div class="feed-bar-fill" style="width:${cam.sad}%;background:var(--sad)"></div></div>
         </div>
-        <div class="feed-persons">👥 ${cam.total_persons} persoane detectate</div>
+        <div class="feed-persons">👥 ${cam.total_persons} people detected</div>
       `;
     }
   });
@@ -299,13 +300,13 @@ async function sendNotification() {
   const status    = document.getElementById("notifyStatus");
 
   if (!message) {
-    status.textContent = "⚠️ Mesajul nu poate fi gol.";
+    status.textContent = "⚠️ Message cannot be empty.";
     status.className   = "notify-status error";
     return;
   }
 
   btn.disabled       = true;
-  status.textContent = "Se trimite...";
+  status.textContent = "Sending...";
   status.className   = "notify-status";
 
   try {
@@ -316,16 +317,16 @@ async function sendNotification() {
     });
     if (res.ok) {
       const label = document.getElementById("notifyRecipient").selectedOptions[0].text;
-      status.textContent = `✅ Mesaj trimis către ${label}.`;
+      status.textContent = `✅ Message sent to ${label}.`;
       status.className   = "notify-status success";
       document.getElementById("notifyMessage").value = "";
     } else {
       const err = await res.json();
-      status.textContent = `❌ Eroare: ${err.detail}`;
+      status.textContent = `❌ Error: ${err.detail}`;
       status.className   = "notify-status error";
     }
   } catch {
-    status.textContent = "❌ Nu s-a putut contacta serverul.";
+    status.textContent = "❌ Could not reach the server.";
     status.className   = "notify-status error";
   } finally {
     btn.disabled = false;
@@ -368,7 +369,7 @@ let _loungeHumidity = 48;
 
 function initLoungeClimate() {
   document.getElementById("zstat-lounge-temp").textContent     = _loungeTemp.toFixed(1) + " °C";
-  document.getElementById("zstat-lounge-humidity").textContent = _loungeHumidity + " %";
+  document.getElementById("zstat-lounge-humidity").textContent = _loungeHumidity + "%";
 }
 
 function tickLoungeTemp() {
@@ -385,7 +386,7 @@ function tickLoungeHumidity() {
   if (Math.random() < 0.3) {
     const delta = Math.random() < 0.5 ? 1 : -1;
     _loungeHumidity = Math.min(60, Math.max(40, _loungeHumidity + delta));
-    document.getElementById("zstat-lounge-humidity").textContent = _loungeHumidity + " %";
+    document.getElementById("zstat-lounge-humidity").textContent = _loungeHumidity + "%";
   }
 }
 
@@ -436,7 +437,7 @@ function refreshZoneFeed(camId) {
         <span>Stressed</span><strong>${cam.sad}%</strong>
         <div class="feed-bar-track"><div class="feed-bar-fill" style="width:${cam.sad}%;background:var(--sad)"></div></div>
       </div>
-      <div class="feed-persons">👥 ${cam.total_persons} persoane detectate</div>
+      <div class="feed-persons">👥 ${cam.total_persons} people detected</div>
     `;
   }
 }

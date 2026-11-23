@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Local databases / scratch
+*.db
+*.sqlite3
+
+# Local editor / tool settings
+.claude/settings.local.json
+.vscode/
+.idea/
